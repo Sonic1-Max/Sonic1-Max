@@ -9,7 +9,7 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/security/Pausable.sol";
 
 /// @title Sonic Token Contract
-/// @notice An ERC-20 token with burn, reflection, anti-whale, and investor-friendly features
+/// @notice An optimized ERC-20 token with low gas fees, burn, reflection, and investor-friendly features
 /// @dev Built for BSC with enhanced security, transparency, and liquidity locking
 contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -23,8 +23,9 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
     /// @notice Maximum tokens that can be burned (30 trillion)
     uint256 public constant MAX_BURN_AMOUNT = 30_000_000_000_000 * 10**18;
     uint256 public totalBurned = 0;
-    bool public burnEnabled = true; // Toggle for burn feature
-    bool public burnPermanentlyDisabled = false; // Permanent burn disable flag
+    bool public burnEnabled = true;
+    bool public burnPermanentlyDisabled = false;
+    bool public reflectionEnabled = true;
 
     /// @notice Maximum transaction amount (5% of total supply)
     uint256 public constant MAX_TX_AMOUNT = MAX_SUPPLY / 20;
@@ -38,8 +39,9 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
     /// @notice Mapping for DEX pairs
     mapping(address => bool) public dexPairs;
 
-    /// @notice Mapping for locked liquidity
+    /// @notice Mapping for locked liquidity with unlock time
     mapping(address => uint256) public lockedLiquidity;
+    mapping(address => uint256) public unlockTimes;
     uint256 public totalLockedLiquidity;
 
     /// @notice Placeholder for staking contract address
@@ -48,15 +50,15 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
     /// @notice Event emitted when tokens are burned
     event TokensBurned(address indexed burner, uint256 amount);
     /// @notice Event emitted when rewards are distributed
-    event RewardsDistributed(uint256 amount);
+    event RewardsDistributed(address indexed holder, uint256 amount);
     /// @notice Event emitted when burn feature is toggled
     event BurnToggled(bool enabled);
     /// @notice Event emitted when burn is permanently disabled
     event BurnPermanentlyDisabled();
-    /// @notice Event emitted when liquidity is burned
-    event LiquidityBurned(address indexed burner, uint256 amount);
-    /// @notice Event emitted when liquidity is locked
-    event LiquidityLocked(address indexed locker, uint256 amount);
+    /// @notice Event emitted when reflection is toggled
+    event ReflectionToggled(bool enabled);
+    /// @notice Event emitted when liquidity is burned and locked
+    event LiquidityLocked(address indexed locker, uint256 amount, uint256 unlockTime);
     /// @notice Event emitted when staking contract is set
     event StakingContractSet(address indexed stakingContract);
 
@@ -70,14 +72,17 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
         dexPairs[_initialDexPair] = true;
     }
 
-    /// @notice Updates reflection balance for an account
+    /// @notice Updates reflection balance for an account (manual call)
     /// @param account The account to update
-    function _updateReflection(address account) internal {
+    function updateReflection(address account) external nonReentrant whenNotPaused {
+        require(reflectionEnabled, "Reflection is disabled");
         if (lastUpdated[account] < block.timestamp && totalReflections > 0) {
             uint256 currentBalance = super.balanceOf(account);
             if (currentBalance > 0) {
-                uint256 share = (currentBalance * totalReflections) / (MAX_SUPPLY - totalBurned);
-                reflectionBalances[account] += share;
+                unchecked {
+                    uint256 share = (currentBalance * totalReflections) / (MAX_SUPPLY - totalBurned);
+                    reflectionBalances[account] += share;
+                }
             }
             lastUpdated[account] = block.timestamp;
         }
@@ -88,22 +93,21 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
     function balanceOf(address account) public view virtual override returns (uint256) {
         uint256 baseBalance = super.balanceOf(account);
         uint256 reflection = reflectionBalances[account];
-        if (baseBalance > 0 && totalReflections > reflectionBalances[account]) {
-            uint256 share = (baseBalance * totalReflections) / (MAX_SUPPLY - totalBurned);
-            reflection = share > reflectionBalances[account] ? share : reflectionBalances[account];
+        if (reflectionEnabled && baseBalance > 0 && totalReflections > reflectionBalances[account]) {
+            unchecked {
+                uint256 share = (baseBalance * totalReflections) / (MAX_SUPPLY - totalBurned);
+                reflection = share > reflectionBalances[account] ? share : reflectionBalances[account];
+            }
         }
         return baseBalance + reflection;
     }
 
-    /// @notice Transfers tokens with burn and reflection logic
+    /// @notice Transfers tokens with burn logic (reflection updated manually)
     /// @param to The recipient address
     /// @param amount The amount to transfer
     function transfer(address to, uint256 amount) public virtual override nonReentrant whenNotPaused returns (bool) {
         require(to != address(0), "Cannot transfer to zero address");
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
-
-        _updateReflection(msg.sender);
-        _updateReflection(to);
 
         if (dexPairs[to] && BURN_RATE > 0 && !isContract(msg.sender) && burnEnabled && !burnPermanentlyDisabled) {
             uint256 burnAmount = (amount * BURN_RATE) / 10000;
@@ -115,17 +119,25 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
                 _burn(msg.sender, netBurnAmount);
                 totalBurned += netBurnAmount;
                 emit TokensBurned(msg.sender, netBurnAmount);
+                if (rewardAmount > 0) {
+                    unchecked {
+                        totalReflections += rewardAmount;
+                    }
+                    emit RewardsDistributed(msg.sender, rewardAmount);
+                }
             } else if (netBurnAmount > 0) {
                 netBurnAmount = MAX_BURN_AMOUNT - totalBurned;
                 if (netBurnAmount > 0) {
                     _burn(msg.sender, netBurnAmount);
                     totalBurned += netBurnAmount;
                     emit TokensBurned(msg.sender, netBurnAmount);
+                    if (rewardAmount > 0) {
+                        unchecked {
+                            totalReflections += rewardAmount;
+                        }
+                        emit RewardsDistributed(msg.sender, rewardAmount);
+                    }
                 }
-            }
-            if (rewardAmount > 0) {
-                totalReflections += rewardAmount;
-                emit RewardsDistributed(rewardAmount);
             }
             return super.transfer(to, transferAmount);
         }
@@ -139,9 +151,6 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
     function transferFrom(address from, address to, uint256 amount) public virtual override nonReentrant whenNotPaused returns (bool) {
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
 
-        _updateReflection(from);
-        _updateReflection(to);
-
         if (dexPairs[to] && BURN_RATE > 0 && !isContract(from) && burnEnabled && !burnPermanentlyDisabled) {
             uint256 burnAmount = (amount * BURN_RATE) / 10000;
             uint256 rewardAmount = (burnAmount * REWARD_RATE) / 100;
@@ -152,17 +161,25 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
                 _burn(from, netBurnAmount);
                 totalBurned += netBurnAmount;
                 emit TokensBurned(from, netBurnAmount);
+                if (rewardAmount > 0) {
+                    unchecked {
+                        totalReflections += rewardAmount;
+                    }
+                    emit RewardsDistributed(from, rewardAmount);
+                }
             } else if (netBurnAmount > 0) {
                 netBurnAmount = MAX_BURN_AMOUNT - totalBurned;
                 if (netBurnAmount > 0) {
                     _burn(from, netBurnAmount);
                     totalBurned += netBurnAmount;
                     emit TokensBurned(from, netBurnAmount);
+                    if (rewardAmount > 0) {
+                        unchecked {
+                            totalReflections += rewardAmount;
+                        }
+                        emit RewardsDistributed(from, rewardAmount);
+                    }
                 }
-            }
-            if (rewardAmount > 0) {
-                totalReflections += rewardAmount;
-                emit RewardsDistributed(rewardAmount);
             }
             return super.transferFrom(from, to, transferAmount);
         }
@@ -175,25 +192,26 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
         require(totalBurned + amount <= MAX_BURN_AMOUNT, "Exceeds max burn limit");
         require(burnEnabled && !burnPermanentlyDisabled, "Burn feature is disabled");
-        _updateReflection(msg.sender);
         _burn(msg.sender, amount);
         totalBurned += amount;
         emit TokensBurned(msg.sender, amount);
     }
 
-    /// @notice Burns liquidity tokens and locks them (only owner)
+    /// @notice Burns and locks liquidity with unlock time (only owner)
     /// @param amount The amount of liquidity tokens to burn and lock
-    function burnAndLockLiquidity(uint256 amount) external onlyOwner whenNotPaused {
+    /// @param unlockTime The time when liquidity can be unlocked
+    function burnAndLockLiquidity(uint256 amount, uint256 unlockTime) external onlyOwner whenNotPaused {
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
         require(totalBurned + amount <= MAX_BURN_AMOUNT, "Exceeds max burn limit");
         require(burnEnabled && !burnPermanentlyDisabled, "Burn feature is disabled");
-        _updateReflection(msg.sender);
+        require(unlockTime > block.timestamp, "Unlock time must be in the future");
         _burn(msg.sender, amount);
         totalBurned += amount;
         lockedLiquidity[msg.sender] += amount;
+        unlockTimes[msg.sender] = unlockTime;
         totalLockedLiquidity += amount;
-        emit LiquidityBurned(msg.sender, amount);
-        emit LiquidityLocked(msg.sender, amount);
+        emit LiquidityLocked(msg.sender, amount, unlockTime);
+        emit TokensBurned(msg.sender, amount);
     }
 
     /// @notice Toggles the burn feature (only owner)
@@ -210,6 +228,13 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
         burnEnabled = false;
         burnPermanentlyDisabled = true;
         emit BurnPermanentlyDisabled();
+    }
+
+    /// @notice Toggles the reflection feature (only owner)
+    /// @param enabled True to enable, false to disable
+    function toggleReflection(bool enabled) external onlyOwner {
+        reflectionEnabled = enabled;
+        emit ReflectionToggled(enabled);
     }
 
     /// @notice Adds a new DEX pair (only owner)
@@ -232,6 +257,15 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
         require(_stakingContract != address(0), "Invalid staking contract address");
         stakingContract = _stakingContract;
         emit StakingContractSet(_stakingContract);
+    }
+
+    /// @notice Simulates staking (placeholder)
+    /// @param amount The amount to stake
+    function stake(uint256 amount) external {
+        require(stakingContract != address(0), "Staking contract not set");
+        require(amount <= super.balanceOf(msg.sender), "Insufficient balance");
+        _transfer(msg.sender, stakingContract, amount);
+        // Placeholder logic - actual staking should be in the staking contract
     }
 
     /// @notice Pauses the contract (only owner)
