@@ -1,28 +1,46 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract Sonic is ERC20 {
+/// @title Sonic Token Contract
+/// @notice An ERC-20 token with burn, reflection, and anti-whale features
+contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
+    using SafeERC20 for IERC20;
+
+    /// @notice Maximum supply of Sonic tokens (121 trillion)
     uint256 public constant MAX_SUPPLY = 121_000_000_000_000 * 10**18;
     bool public isMinted = false;
 
+    /// @notice Burn rate (0.5% per transaction to DEX)
     uint256 public constant BURN_RATE = 50;
+    /// @notice Maximum tokens that can be burned (30 trillion)
     uint256 public constant MAX_BURN_AMOUNT = 30_000_000_000_000 * 10**18;
     uint256 public totalBurned = 0;
 
+    /// @notice Maximum transaction amount (5% of total supply)
     uint256 public constant MAX_TX_AMOUNT = MAX_SUPPLY / 20;
 
+    /// @notice Reward rate for holders (0.2% of burn amount)
     uint256 public constant REWARD_RATE = 20;
     uint256 public totalReflections = 0;
     mapping(address => uint256) public reflectionBalances;
     mapping(address => uint256) public lastUpdated;
 
+    /// @notice Mapping for DEX pairs
     mapping(address => bool) public dexPairs;
 
+    /// @notice Event emitted when tokens are burned
     event TokensBurned(address indexed burner, uint256 amount);
+    /// @notice Event emitted when rewards are distributed
     event RewardsDistributed(uint256 amount);
 
+    /// @notice Constructor to initialize the contract
+    /// @param _initialDexPair The initial DEX pair address
     constructor(address _initialDexPair) ERC20("Sonic", "SNC") {
         require(!isMinted, "Tokens already minted");
         require(_initialDexPair != address(0), "Invalid initial DEX pair");
@@ -31,6 +49,8 @@ contract Sonic is ERC20 {
         dexPairs[_initialDexPair] = true;
     }
 
+    /// @notice Updates reflection balance for an account
+    /// @param account The account to update
     function _updateReflection(address account) internal {
         if (lastUpdated[account] < block.timestamp) {
             uint256 currentBalance = super.balanceOf(account);
@@ -42,6 +62,8 @@ contract Sonic is ERC20 {
         }
     }
 
+    /// @notice Returns the balance of an account including reflections
+    /// @param account The account to check
     function balanceOf(address account) public view virtual override returns (uint256) {
         uint256 baseBalance = super.balanceOf(account);
         uint256 reflection = reflectionBalances[account];
@@ -52,7 +74,10 @@ contract Sonic is ERC20 {
         return baseBalance + reflection;
     }
 
-    function transfer(address to, uint256 amount) public virtual override returns (bool) {
+    /// @notice Transfers tokens with burn and reflection logic
+    /// @param to The recipient address
+    /// @param amount The amount to transfer
+    function transfer(address to, uint256 amount) public virtual override nonReentrant whenNotPaused returns (bool) {
         require(to != address(0), "Cannot transfer to zero address");
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
 
@@ -86,7 +111,11 @@ contract Sonic is ERC20 {
         return super.transfer(to, amount);
     }
 
-    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
+    /// @notice Transfers tokens from one address to another
+    /// @param from The sender address
+    /// @param to The recipient address
+    /// @param amount The amount to transfer
+    function transferFrom(address from, address to, uint256 amount) public virtual override nonReentrant whenNotPaused returns (bool) {
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
 
         _updateReflection(from);
@@ -119,7 +148,9 @@ contract Sonic is ERC20 {
         return super.transferFrom(from, to, amount);
     }
 
-    function burn(uint256 amount) public {
+    /// @notice Burns tokens manually (only owner)
+    /// @param amount The amount to burn
+    function burn(uint256 amount) public onlyOwner whenNotPaused {
         require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
         require(totalBurned + amount <= MAX_BURN_AMOUNT, "Exceeds max burn limit");
         _updateReflection(msg.sender);
@@ -128,6 +159,32 @@ contract Sonic is ERC20 {
         emit TokensBurned(msg.sender, amount);
     }
 
+    /// @notice Adds a new DEX pair (only owner)
+    /// @param dexPair The address of the DEX pair
+    function addDexPair(address dexPair) external onlyOwner {
+        require(dexPair != address(0), "Invalid DEX pair address");
+        dexPairs[dexPair] = true;
+    }
+
+    /// @notice Removes a DEX pair (only owner)
+    /// @param dexPair The address of the DEX pair
+    function removeDexPair(address dexPair) external onlyOwner {
+        require(dexPairs[dexPair], "DEX pair not found");
+        dexPairs[dexPair] = false;
+    }
+
+    /// @notice Pauses the contract (only owner)
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /// @notice Unpauses the contract (only owner)
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /// @notice Checks if an address is a contract
+    /// @param account The address to check
     function isContract(address account) internal view returns (bool) {
         uint256 size;
         assembly {
@@ -136,6 +193,7 @@ contract Sonic is ERC20 {
         return size > 0;
     }
 
+    /// @notice Prevents direct BNB deposits
     receive() external payable {
         revert("Contract does not accept direct BNB");
     }
