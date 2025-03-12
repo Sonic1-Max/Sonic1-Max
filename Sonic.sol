@@ -8,13 +8,13 @@ import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contr
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/security/ReentrancyGuard.sol";
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.3/contracts/security/Pausable.sol";
 
-/// @title Sonic Token Contract
+/// @title otakudump Token Contract
 /// @notice An ERC-20 token with burn, reflection, anti-whale, and investor-friendly features
 /// @dev Built for BSC with enhanced security, transparency, and liquidity locking
-contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
+contract otakudump is ERC20, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
 
-    /// @notice Maximum supply of Sonic tokens (121 trillion)
+    /// @notice Maximum supply of otakudump tokens (121 trillion)
     uint256 public constant MAX_SUPPLY = 121_000_000_000_000 * 10**18;
     bool public isMinted = false;
 
@@ -62,7 +62,7 @@ contract Sonic is ERC20, Ownable, ReentrancyGuard, Pausable {
 
     /// @notice Constructor to initialize the contract
     /// @param _initialDexPair The initial DEX pair address
-    constructor(address _initialDexPair) ERC20("Sonic", "SNC") {
+    constructor(address _initialDexPair) ERC20("otakudump", "OTD") {
         require(!isMinted, "Tokens already minted");
         require(_initialDexPair != address(0), "Invalid initial DEX pair");
         _mint(msg.sender, MAX_SUPPLY);
