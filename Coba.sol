@@ -1,71 +1,218 @@
 // SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
 pragma solidity ^0.8.20;
 
-// Interface untuk IERC20
+/**
+ * @dev Interface of the ERC-20 standard as defined in the ERC.
+ */
 interface IERC20 {
+    /**
+     * @dev Emitted when `value` tokens are moved from one account (`from`) to
+     * another (`to`).
+     *
+     * Note that `value` may be zero.
+     */
     event Transfer(address indexed from, address indexed to, uint256 value);
+
+    /**
+     * @dev Emitted when the allowance of a `spender` for an `owner` is set by
+     * a call to {approve}. `value` is the new allowance.
+     */
     event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    /**
+     * @dev Returns the value of tokens in existence.
+     */
     function totalSupply() external view returns (uint256);
+
+    /**
+     * @dev Returns the value of tokens owned by `account`.
+     */
     function balanceOf(address account) external view returns (uint256);
+
+    /**
+     * @dev Moves a `value` amount of tokens from the caller's account to `to`.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
     function transfer(address to, uint256 value) external returns (bool);
+
+    /**
+     * @dev Returns the remaining number of tokens that `spender` will be
+     * allowed to spend on behalf of `owner` through {transferFrom}. This is
+     * zero by default.
+     *
+     * This value changes when {approve} or {transferFrom} are called.
+     */
     function allowance(address owner, address spender) external view returns (uint256);
+
+    /**
+     * @dev Sets a `value` amount of tokens as the allowance of `spender` over the
+     * caller's tokens.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * IMPORTANT: Beware that changing an allowance with this method brings the risk
+     * that someone may use both the old and the new allowance by unfortunate
+     * transaction ordering. One possible solution to mitigate this race
+     * condition is to first reduce the spender's allowance to 0 and set the
+     * desired value afterwards:
+     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+     *
+     * Emits an {Approval} event.
+     */
     function approve(address spender, uint256 value) external returns (bool);
+
+    /**
+     * @dev Moves a `value` amount of tokens from `from` to `to` using the
+     * allowance mechanism. `value` is then deducted from the caller's
+     * allowance.
+     *
+     * Returns a boolean value indicating whether the operation succeeded.
+     *
+     * Emits a {Transfer} event.
+     */
     function transferFrom(address from, address to, uint256 value) external returns (bool);
 }
 
-// Interface untuk IERC20Metadata
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Interface for the optional metadata functions from the ERC-20 standard.
+ */
 interface IERC20Metadata is IERC20 {
+    /**
+     * @dev Returns the name of the token.
+     */
     function name() external view returns (string memory);
+
+    /**
+     * @dev Returns the symbol of the token.
+     */
     function symbol() external view returns (string memory);
+
+    /**
+     * @dev Returns the decimals places of the token.
+     */
     function decimals() external view returns (uint8);
 }
 
-// Interface untuk IERC20Errors
-interface IERC20Errors {
-    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
-    error ERC20InvalidSender(address sender);
-    error ERC20InvalidReceiver(address receiver);
-    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
-    error ERC20InvalidApprover(address approver);
-    error ERC20InvalidSpender(address spender);
-}
+pragma solidity ^0.8.20;
 
-// Interface untuk IERC165 (digunakan oleh SafeERC20)
-interface IERC165 {
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
-}
-
-// Interface untuk IERC20Permit (opsional, untuk SafeERC20)
-interface IERC20Permit {
-    function permit(
-        address owner,
-        address spender,
-        uint256 value,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-    function nonces(address owner) external view returns (uint256);
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-// Kontrak abstrak Initializable (untuk kontrak upgradeable)
+/**
+ * @dev This is a base contract to aid in writing upgradeable contracts, or any kind of contract that will be deployed
+ * behind a proxy. Since proxied contracts do not make use of a constructor, it's common to move constructor logic to an
+ * external initializer function, usually called `initialize`. It then becomes necessary to protect this initializer
+ * function so it can only be called once. The {initializer} modifier provided by this contract will have this effect.
+ *
+ * The initialization functions use a version number. Once a version number is used, it is consumed and cannot be
+ * reused. This mechanism prevents re-execution of each "step" but allows the creation of new initialization steps in
+ * case an upgrade adds a module that needs to be initialized.
+ *
+ * For example:
+ *
+ * [.hljs-theme-light.nopadding]
+ * ```solidity
+ * contract MyToken is ERC20Upgradeable {
+ *     function initialize() initializer public {
+ *         __ERC20_init("MyToken", "MTK");
+ *     }
+ * }
+ *
+ * contract MyTokenV2 is MyToken, ERC20PermitUpgradeable {
+ *     function initializeV2() reinitializer(2) public {
+ *         __ERC20Permit_init("MyToken");
+ *     }
+ * }
+ * ```
+ *
+ * TIP: To avoid leaving the proxy in an uninitialized state, the initializer function should be called as early as
+ * possible by providing the encoded function call as the `_data` argument to {ERC1967Proxy-constructor}.
+ *
+ * CAUTION: When used with inheritance, manual care must be taken to not invoke a parent initializer twice, or to ensure
+ * that all initializers are idempotent. This is not verified automatically as constructors are by Solidity.
+ *
+ * [CAUTION]
+ * ====
+ * Avoid leaving a contract uninitialized.
+ *
+ * An uninitialized contract can be taken over by an attacker. This applies to both a proxy and its implementation
+ * contract, which may impact the proxy. To prevent the implementation contract from being used, you should invoke
+ * the {_disableInitializers} function in the constructor to automatically lock it when it is deployed:
+ *
+ * [.hljs-theme-light.nopadding]
+ * ```
+ * /// @custom:oz-upgrades-unsafe-allow constructor
+ * constructor() {
+ *     _disableInitializers();
+ * }
+ * ```
+ * ====
+ */
 abstract contract Initializable {
+    /**
+     * @dev Storage of the initializable contract.
+     *
+     * It's implemented on a custom ERC-7201 namespace to reduce the risk of storage collisions
+     * when using with upgradeable contracts.
+     *
+     * @custom:storage-location erc7201:openzeppelin.storage.Initializable
+     */
     struct InitializableStorage {
+        /**
+         * @dev Indicates that the contract has been initialized.
+         */
         uint64 _initialized;
+        /**
+         * @dev Indicates that the contract is in the process of being initialized.
+         */
         bool _initializing;
     }
 
+    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Initializable")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant INITIALIZABLE_STORAGE = 0xf0c57e16840df040f15088dc2f81fe391c3923bec73e23a9662efc9c229c6a00;
+
+    /**
+     * @dev The contract is already initialized.
+     */
     error InvalidInitialization();
+
+    /**
+     * @dev The contract is not initializing.
+     */
     error NotInitializing();
+
+    /**
+     * @dev Triggered when the contract has been initialized or reinitialized.
+     */
     event Initialized(uint64 version);
 
+    /**
+     * @dev A modifier that defines a protected initializer function that can be invoked at most once. In its scope,
+     * `onlyInitializing` functions can be used to initialize parent contracts.
+     *
+     * Similar to `reinitializer(1)`, except that in the context of a constructor an `initializer` may be invoked any
+     * number of times. This behavior in the constructor can be useful during testing and is not expected to be used in
+     * production.
+     *
+     * Emits an {Initialized} event.
+     */
     modifier initializer() {
+        // solhint-disable-next-line var-name-mixedcase
         InitializableStorage storage $ = _getInitializableStorage();
+
+        // Cache values to avoid duplicated sloads
         bool isTopLevelCall = !$._initializing;
         uint64 initialized = $._initialized;
+
+        // Allowed calls:
+        // - initialSetup: the contract is not in the initializing state and no previous version was
+        //                 initialized
+        // - construction: the contract is initialized at version 1 (no reininitialization) and the
+        //                 current contract is just being deployed
         bool initialSetup = initialized == 0 && isTopLevelCall;
         bool construction = initialized == 1 && address(this).code.length == 0;
 
@@ -83,8 +230,28 @@ abstract contract Initializable {
         }
     }
 
+    /**
+     * @dev A modifier that defines a protected reinitializer function that can be invoked at most once, and only if the
+     * contract hasn't been initialized to a greater version before. In its scope, `onlyInitializing` functions can be
+     * used to initialize parent contracts.
+     *
+     * A reinitializer may be used after the original initialization step. This is essential to configure modules that
+     * are added through upgrades and that require initialization.
+     *
+     * When `version` is 1, this modifier is similar to `initializer`, except that functions marked with `reinitializer`
+     * cannot be nested. If one is invoked in the context of another, execution will revert.
+     *
+     * Note that versions can jump in increments greater than 1; this implies that if multiple reinitializers coexist in
+     * a contract, executing them in the right order is up to the developer or operator.
+     *
+     * WARNING: Setting the version to 2**64 - 1 will prevent any future reinitialization.
+     *
+     * Emits an {Initialized} event.
+     */
     modifier reinitializer(uint64 version) {
+        // solhint-disable-next-line var-name-mixedcase
         InitializableStorage storage $ = _getInitializableStorage();
+
         if ($._initializing || $._initialized >= version) {
             revert InvalidInitialization();
         }
@@ -95,19 +262,36 @@ abstract contract Initializable {
         emit Initialized(version);
     }
 
+    /**
+     * @dev Modifier to protect an initialization function so that it can only be invoked by functions with the
+     * {initializer} and {reinitializer} modifiers, directly or indirectly.
+     */
     modifier onlyInitializing() {
         _checkInitializing();
         _;
     }
 
+    /**
+     * @dev Reverts if the contract is not in an initializing state. See {onlyInitializing}.
+     */
     function _checkInitializing() internal view virtual {
         if (!_isInitializing()) {
             revert NotInitializing();
         }
     }
 
+    /**
+     * @dev Locks the contract, preventing any future reinitialization. This cannot be part of an initializer call.
+     * Calling this in the constructor of a contract will prevent that contract from being initialized or reinitialized
+     * to any version. It is recommended to use this to lock implementation contracts that are designed to be called
+     * through proxies.
+     *
+     * Emits an {Initialized} event the first time it is successfully executed.
+     */
     function _disableInitializers() internal virtual {
+        // solhint-disable-next-line var-name-mixedcase
         InitializableStorage storage $ = _getInitializableStorage();
+
         if ($._initializing) {
             revert InvalidInitialization();
         }
@@ -117,14 +301,24 @@ abstract contract Initializable {
         }
     }
 
+    /**
+     * @dev Returns the highest version that has been initialized. See {reinitializer}.
+     */
     function _getInitializedVersion() internal view returns (uint64) {
         return _getInitializableStorage()._initialized;
     }
 
+    /**
+     * @dev Returns `true` if the contract is currently initializing. See {onlyInitializing}.
+     */
     function _isInitializing() internal view returns (bool) {
         return _getInitializableStorage()._initializing;
     }
 
+    /**
+     * @dev Returns a pointer to the storage namespace.
+     */
+    // solhint-disable-next-line var-name-mixedcase
     function _getInitializableStorage() private pure returns (InitializableStorage storage $) {
         assembly {
             $.slot := INITIALIZABLE_STORAGE
@@ -132,31 +326,231 @@ abstract contract Initializable {
     }
 }
 
-// Kontrak abstrak ContextUpgradeable
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they should not be accessed in such a direct
+ * manner, since when dealing with meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
 abstract contract ContextUpgradeable is Initializable {
-    function __Context_init() internal onlyInitializing {}
-    function __Context_init_unchained() internal onlyInitializing {}
+    function __Context_init() internal onlyInitializing {
+    }
+
+    function __Context_init_unchained() internal onlyInitializing {
+    }
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
     }
+
     function _msgData() internal view virtual returns (bytes calldata) {
         return msg.data;
     }
+
     function _contextSuffixLength() internal view virtual returns (uint256) {
         return 0;
     }
 }
 
-// Kontrak abstrak ERC20Upgradeable
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Standard ERC-20 Errors
+ * Interface of the https://eips.ethereum.org/EIPS/eip-6093[ERC-6093] custom errors for ERC-20 tokens.
+ */
+interface IERC20Errors {
+    /**
+     * @dev Indicates an error related to the current `balance` of a `sender`. Used in transfers.
+     * @param sender Address whose tokens are being transferred.
+     * @param balance Current balance for the interacting account.
+     * @param needed Minimum amount required to perform a transfer.
+     */
+    error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
+
+    /**
+     * @dev Indicates a failure with the token `sender`. Used in transfers.
+     * @param sender Address whose tokens are being transferred.
+     */
+    error ERC20InvalidSender(address sender);
+
+    /**
+     * @dev Indicates a failure with the token `receiver`. Used in transfers.
+     * @param receiver Address to which tokens are being transferred.
+     */
+    error ERC20InvalidReceiver(address receiver);
+
+    /**
+     * @dev Indicates a failure with the `spender`’s `allowance`. Used in transfers.
+     * @param spender Address that may be allowed to operate on tokens without being their owner.
+     * @param allowance Amount of tokens a `spender` is allowed to operate with.
+     * @param needed Minimum amount required to perform a transfer.
+     */
+    error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
+
+    /**
+     * @dev Indicates a failure with the `approver` of a token to be approved. Used in approvals.
+     * @param approver Address initiating an approval operation.
+     */
+    error ERC20InvalidApprover(address approver);
+
+    /**
+     * @dev Indicates a failure with the `spender` to be approved. Used in approvals.
+     * @param spender Address that may be allowed to operate on tokens without being their owner.
+     */
+    error ERC20InvalidSpender(address spender);
+}
+
+/**
+ * @dev Standard ERC-721 Errors
+ * Interface of the https://eips.ethereum.org/EIPS/eip-6093[ERC-6093] custom errors for ERC-721 tokens.
+ */
+interface IERC721Errors {
+    /**
+     * @dev Indicates that an address can't be an owner. For example, `address(0)` is a forbidden owner in ERC-20.
+     * Used in balance queries.
+     * @param owner Address of the current owner of a token.
+     */
+    error ERC721InvalidOwner(address owner);
+
+    /**
+     * @dev Indicates a `tokenId` whose `owner` is the zero address.
+     * @param tokenId Identifier number of a token.
+     */
+    error ERC721NonexistentToken(uint256 tokenId);
+
+    /**
+     * @dev Indicates an error related to the ownership over a particular token. Used in transfers.
+     * @param sender Address whose tokens are being transferred.
+     * @param tokenId Identifier number of a token.
+     * @param owner Address of the current owner of a token.
+     */
+    error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
+
+    /**
+     * @dev Indicates a failure with the token `sender`. Used in transfers.
+     * @param sender Address whose tokens are being transferred.
+     */
+    error ERC721InvalidSender(address sender);
+
+    /**
+     * @dev Indicates a failure with the token `receiver`. Used in transfers.
+     * @param receiver Address to which tokens are being transferred.
+     */
+    error ERC721InvalidReceiver(address receiver);
+
+    /**
+     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
+     * @param operator Address that may be allowed to operate on tokens without being their owner.
+     * @param tokenId Identifier number of a token.
+     */
+    error ERC721InsufficientApproval(address operator, uint256 tokenId);
+
+    /**
+     * @dev Indicates a failure with the `approver` of a token to be approved. Used in approvals.
+     * @param approver Address initiating an approval operation.
+     */
+    error ERC721InvalidApprover(address approver);
+
+    /**
+     * @dev Indicates a failure with the `operator` to be approved. Used in approvals.
+     * @param operator Address that may be allowed to operate on tokens without being their owner.
+     */
+    error ERC721InvalidOperator(address operator);
+}
+
+/**
+ * @dev Standard ERC-1155 Errors
+ * Interface of the https://eips.ethereum.org/EIPS/eip-6093[ERC-6093] custom errors for ERC-1155 tokens.
+ */
+interface IERC1155Errors {
+    /**
+     * @dev Indicates an error related to the current `balance` of a `sender`. Used in transfers.
+     * @param sender Address whose tokens are being transferred.
+     * @param balance Current balance for the interacting account.
+     * @param needed Minimum amount required to perform a transfer.
+     * @param tokenId Identifier number of a token.
+     */
+    error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed, uint256 tokenId);
+
+    /**
+     * @dev Indicates a failure with the token `sender`. Used in transfers.
+     * @param sender Address whose tokens are being transferred.
+     */
+    error ERC1155InvalidSender(address sender);
+
+    /**
+     * @dev Indicates a failure with the token `receiver`. Used in transfers.
+     * @param receiver Address to which tokens are being transferred.
+     */
+    error ERC1155InvalidReceiver(address receiver);
+
+    /**
+     * @dev Indicates a failure with the `operator`’s approval. Used in transfers.
+     * @param operator Address that may be allowed to operate on tokens without being their owner.
+     * @param owner Address of the current owner of a token.
+     */
+    error ERC1155MissingApprovalForAll(address operator, address owner);
+
+    /**
+     * @dev Indicates a failure with the `approver` of a token to be approved. Used in approvals.
+     * @param approver Address initiating an approval operation.
+     */
+    error ERC1155InvalidApprover(address approver);
+
+    /**
+     * @dev Indicates a failure with the `operator` to be approved. Used in approvals.
+     * @param operator Address that may be allowed to operate on tokens without being their owner.
+     */
+    error ERC1155InvalidOperator(address operator);
+
+    /**
+     * @dev Indicates an array length mismatch between ids and values in a safeBatchTransferFrom operation.
+     * Used in batch transfers.
+     * @param idsLength Length of the array of token identifiers
+     * @param valuesLength Length of the array of token amounts
+     */
+    error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength);
+}
+
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Implementation of the {IERC20} interface.
+ *
+ * This implementation is agnostic to the way tokens are created. This means
+ * that a supply mechanism has to be added in a derived contract using {_mint}.
+ *
+ * TIP: For a detailed writeup see our guide
+ * https://forum.openzeppelin.com/t/how-to-implement-erc20-supply-mechanisms/226[How
+ * to implement supply mechanisms].
+ *
+ * The default value of {decimals} is 18. To change this, you should override
+ * this function so it returns a different value.
+ *
+ * We have followed general OpenZeppelin Contracts guidelines: functions revert
+ * instead returning `false` on failure. This behavior is nonetheless
+ * conventional and does not conflict with the expectations of ERC-20
+ * applications.
+ */
 abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20, IERC20Metadata, IERC20Errors {
+    /// @custom:storage-location erc7201:openzeppelin.storage.ERC20
     struct ERC20Storage {
-        mapping(address => uint256) _balances;
-        mapping(address => mapping(address => uint256)) _allowances;
+        mapping(address account => uint256) _balances;
+
+        mapping(address account => mapping(address spender => uint256)) _allowances;
+
         uint256 _totalSupply;
+
         string _name;
         string _symbol;
     }
 
+    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.ERC20")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ERC20StorageLocation = 0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00;
 
     function _getERC20Storage() private pure returns (ERC20Storage storage $) {
@@ -165,6 +559,12 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         }
     }
 
+    /**
+     * @dev Sets the values for {name} and {symbol}.
+     *
+     * All two of these values are immutable: they can only be set once during
+     * construction.
+     */
     function __ERC20_init(string memory name_, string memory symbol_) internal onlyInitializing {
         __ERC20_init_unchained(name_, symbol_);
     }
@@ -175,55 +575,128 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         $._symbol = symbol_;
     }
 
-    function name() public view virtual override returns (string memory) {
+    /**
+     * @dev Returns the name of the token.
+     */
+    function name() public view virtual returns (string memory) {
         ERC20Storage storage $ = _getERC20Storage();
         return $._name;
     }
 
-    function symbol() public view virtual override returns (string memory) {
+    /**
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
+     */
+    function symbol() public view virtual returns (string memory) {
         ERC20Storage storage $ = _getERC20Storage();
         return $._symbol;
     }
 
-    function decimals() public view virtual override returns (uint8) {
+    /**
+     * @dev Returns the number of decimals used to get its user representation.
+     * For example, if `decimals` equals `2`, a balance of `505` tokens should
+     * be displayed to a user as `5.05` (`505 / 10 ** 2`).
+     *
+     * Tokens usually opt for a value of 18, imitating the relationship between
+     * Ether and Wei. This is the default value returned by this function, unless
+     * it's overridden.
+     *
+     * NOTE: This information is only used for _display_ purposes: it in
+     * no way affects any of the arithmetic of the contract, including
+     * {IERC20-balanceOf} and {IERC20-transfer}.
+     */
+    function decimals() public view virtual returns (uint8) {
         return 18;
     }
 
-    function totalSupply() public view virtual override returns (uint256) {
+    /**
+     * @dev See {IERC20-totalSupply}.
+     */
+    function totalSupply() public view virtual returns (uint256) {
         ERC20Storage storage $ = _getERC20Storage();
         return $._totalSupply;
     }
 
-    function balanceOf(address account) public view virtual override returns (uint256) {
+    /**
+     * @dev See {IERC20-balanceOf}.
+     */
+    function balanceOf(address account) public view virtual returns (uint256) {
         ERC20Storage storage $ = _getERC20Storage();
         return $._balances[account];
     }
 
-    function transfer(address to, uint256 value) public virtual override returns (bool) {
+    /**
+     * @dev See {IERC20-transfer}.
+     *
+     * Requirements:
+     *
+     * - `to` cannot be the zero address.
+     * - the caller must have a balance of at least `value`.
+     */
+    function transfer(address to, uint256 value) public virtual returns (bool) {
         address owner = _msgSender();
         _transfer(owner, to, value);
         return true;
     }
 
-    function allowance(address owner, address spender) public view virtual override returns (uint256) {
+    /**
+     * @dev See {IERC20-allowance}.
+     */
+    function allowance(address owner, address spender) public view virtual returns (uint256) {
         ERC20Storage storage $ = _getERC20Storage();
         return $._allowances[owner][spender];
     }
 
-    function approve(address spender, uint256 value) public virtual override returns (bool) {
+    /**
+     * @dev See {IERC20-approve}.
+     *
+     * NOTE: If `value` is the maximum `uint256`, the allowance is not updated on
+     * `transferFrom`. This is semantically equivalent to an infinite approval.
+     *
+     * Requirements:
+     *
+     * - `spender` cannot be the zero address.
+     */
+    function approve(address spender, uint256 value) public virtual returns (bool) {
         address owner = _msgSender();
         _approve(owner, spender, value);
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 value) public virtual override returns (bool) {
+    /**
+     * @dev See {IERC20-transferFrom}.
+     *
+     * Skips emitting an {Approval} event indicating an allowance update. This is not
+     * required by the ERC. See {xref-ERC20-_approve-address-address-uint256-bool-}[_approve].
+     *
+     * NOTE: Does not update the allowance if the current allowance
+     * is the maximum `uint256`.
+     *
+     * Requirements:
+     *
+     * - `from` and `to` cannot be the zero address.
+     * - `from` must have a balance of at least `value`.
+     * - the caller must have allowance for ``from``'s tokens of at least
+     * `value`.
+     */
+    function transferFrom(address from, address to, uint256 value) public virtual returns (bool) {
         address spender = _msgSender();
         _spendAllowance(from, spender, value);
         _transfer(from, to, value);
         return true;
     }
 
-    function _transfer(address from, address to, uint256 value) internal virtual {
+    /**
+     * @dev Moves a `value` amount of tokens from `from` to `to`.
+     *
+     * This internal function is equivalent to {transfer}, and can be used to
+     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     *
+     * Emits a {Transfer} event.
+     *
+     * NOTE: This function is not virtual, {_update} should be overridden instead.
+     */
+    function _transfer(address from, address to, uint256 value) internal {
         if (from == address(0)) {
             revert ERC20InvalidSender(address(0));
         }
@@ -233,9 +706,17 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         _update(from, to, value);
     }
 
+    /**
+     * @dev Transfers a `value` amount of tokens from `from` to `to`, or alternatively mints (or burns) if `from`
+     * (or `to`) is the zero address. All customizations to transfers, mints, and burns should be done by overriding
+     * this function.
+     *
+     * Emits a {Transfer} event.
+     */
     function _update(address from, address to, uint256 value) internal virtual {
         ERC20Storage storage $ = _getERC20Storage();
         if (from == address(0)) {
+            // Overflow check required: The rest of the code assumes that totalSupply never overflows
             $._totalSupply += value;
         } else {
             uint256 fromBalance = $._balances[from];
@@ -243,16 +724,19 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
                 revert ERC20InsufficientBalance(from, fromBalance, value);
             }
             unchecked {
+                // Overflow not possible: value <= fromBalance <= totalSupply.
                 $._balances[from] = fromBalance - value;
             }
         }
 
         if (to == address(0)) {
             unchecked {
+                // Overflow not possible: value <= totalSupply or value <= fromBalance <= totalSupply.
                 $._totalSupply -= value;
             }
         } else {
             unchecked {
+                // Overflow not possible: balance + value is at most totalSupply, which we know fits into a uint256.
                 $._balances[to] += value;
             }
         }
@@ -260,6 +744,14 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         emit Transfer(from, to, value);
     }
 
+    /**
+     * @dev Creates a `value` amount of tokens and assigns them to `account`, by transferring it from address(0).
+     * Relies on the `_update` mechanism
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * NOTE: This function is not virtual, {_update} should be overridden instead.
+     */
     function _mint(address account, uint256 value) internal {
         if (account == address(0)) {
             revert ERC20InvalidReceiver(address(0));
@@ -267,6 +759,14 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         _update(address(0), account, value);
     }
 
+    /**
+     * @dev Destroys a `value` amount of tokens from `account`, lowering the total supply.
+     * Relies on the `_update` mechanism.
+     *
+     * Emits a {Transfer} event with `to` set to the zero address.
+     *
+     * NOTE: This function is not virtual, {_update} should be overridden instead
+     */
     function _burn(address account, uint256 value) internal {
         if (account == address(0)) {
             revert ERC20InvalidSender(address(0));
@@ -274,10 +774,43 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         _update(account, address(0), value);
     }
 
+    /**
+     * @dev Sets `value` as the allowance of `spender` over the `owner` s tokens.
+     *
+     * This internal function is equivalent to `approve`, and can be used to
+     * e.g. set automatic allowances for certain subsystems, etc.
+     *
+     * Emits an {Approval} event.
+     *
+     * Requirements:
+     *
+     * - `owner` cannot be the zero address.
+     * - `spender` cannot be the zero address.
+     *
+     * Overrides to this logic should be done to the variant with an additional `bool emitEvent` argument.
+     */
     function _approve(address owner, address spender, uint256 value) internal {
         _approve(owner, spender, value, true);
     }
 
+    /**
+     * @dev Variant of {_approve} with an optional flag to enable or disable the {Approval} event.
+     *
+     * By default (when calling {_approve}) the flag is set to true. On the other hand, approval changes made by
+     * `_spendAllowance` during the `transferFrom` operation set the flag to false. This saves gas by not emitting any
+     * `Approval` event during `transferFrom` operations.
+     *
+     * Anyone who wishes to continue emitting `Approval` events on the`transferFrom` operation can force the flag to
+     * true using the following override:
+     *
+     * ```solidity
+     * function _approve(address owner, address spender, uint256 value, bool) internal virtual override {
+     *     super._approve(owner, spender, value, true);
+     * }
+     * ```
+     *
+     * Requirements are the same as {_approve}.
+     */
     function _approve(address owner, address spender, uint256 value, bool emitEvent) internal virtual {
         ERC20Storage storage $ = _getERC20Storage();
         if (owner == address(0)) {
@@ -292,6 +825,14 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
         }
     }
 
+    /**
+     * @dev Updates `owner` s allowance for `spender` based on spent `value`.
+     *
+     * Does not update the allowance value in case of infinite allowance.
+     * Revert if not enough allowance is available.
+     *
+     * Does not emit an {Approval} event.
+     */
     function _spendAllowance(address owner, address spender, uint256 value) internal virtual {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance != type(uint256).max) {
@@ -305,17 +846,50 @@ abstract contract ERC20Upgradeable is Initializable, ContextUpgradeable, IERC20,
     }
 }
 
-// Kontrak abstrak OwnableUpgradeable
+pragma solidity ^0.8.20;
+
+/**
+ * @dev Contract module which provides a basic access control mechanism, where
+ * there is an account (an owner) that can be granted exclusive access to
+ * specific functions.
+ *
+ * The initial owner is set to the address provided by the deployer. This can
+ * later be changed with {transferOwnership}.
+ *
+ * This module is used through inheritance. It will make available the modifier
+ * `onlyOwner`, which can be applied to your functions to restrict their use to
+ * the owner.
+ */
 abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
+    /// @custom:storage-location erc7201:openzeppelin.storage.Ownable
     struct OwnableStorage {
         address _owner;
     }
 
+    // keccak256(abi.encode(uint256(keccak256("openzeppelin.storage.Ownable")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant OwnableStorageLocation = 0x9016d09d72d40fdae2fd8ceac6b6234c7706214fd39c1cd1e609a0528c199300;
+
+    function _getOwnableStorage() private pure returns (OwnableStorage storage $) {
+        assembly {
+            $.slot := OwnableStorageLocation
+        }
+    }
+
+    /**
+     * @dev The caller account is not authorized to perform an operation.
+     */
     error OwnableUnauthorizedAccount(address account);
+
+    /**
+     * @dev The owner is not a valid owner account. (eg. `address(0)`)
+     */
     error OwnableInvalidOwner(address owner);
+
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    /**
+     * @dev Initializes the contract setting the address provided by the deployer as the initial owner.
+     */
     function __Ownable_init(address initialOwner) internal onlyInitializing {
         __Ownable_init_unchained(initialOwner);
     }
@@ -327,26 +901,46 @@ abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
         _transferOwnership(initialOwner);
     }
 
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
     modifier onlyOwner() {
         _checkOwner();
         _;
     }
 
+    /**
+     * @dev Returns the address of the current owner.
+     */
     function owner() public view virtual returns (address) {
         OwnableStorage storage $ = _getOwnableStorage();
         return $._owner;
     }
 
+    /**
+     * @dev Throws if the sender is not the owner.
+     */
     function _checkOwner() internal view virtual {
         if (owner() != _msgSender()) {
             revert OwnableUnauthorizedAccount(_msgSender());
         }
     }
 
+    /**
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby disabling any functionality that is only available to the owner.
+     */
     function renounceOwnership() public virtual onlyOwner {
         _transferOwnership(address(0));
     }
 
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
     function transferOwnership(address newOwner) public virtual onlyOwner {
         if (newOwner == address(0)) {
             revert OwnableInvalidOwner(address(0));
@@ -354,400 +948,32 @@ abstract contract OwnableUpgradeable is Initializable, ContextUpgradeable {
         _transferOwnership(newOwner);
     }
 
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
     function _transferOwnership(address newOwner) internal virtual {
         OwnableStorage storage $ = _getOwnableStorage();
         address oldOwner = $._owner;
         $._owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
     }
-
-    function _getOwnableStorage() private pure returns (OwnableStorage storage $) {
-        assembly {
-            $.slot := OwnableStorageLocation
-        }
-    }
 }
 
-// Kontrak abstrak ReentrancyGuardUpgradeable
-abstract contract ReentrancyGuardUpgradeable is Initializable {
-    struct ReentrancyGuardStorage {
-        uint256 _status;
-    }
-
-    bytes32 private constant ReentrancyGuardStorageLocation = 0xad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68ebcd00;
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-    error ReentrancyGuardReentrantCall();
-
-    function __ReentrancyGuard_init() internal onlyInitializing {
-        __ReentrancyGuard_init_unchained();
-    }
-
-    function __ReentrancyGuard_init_unchained() internal onlyInitializing {
-        ReentrancyGuardStorage storage $ = _getReentrancyGuardStorage();
-        $._status = _NOT_ENTERED;
-    }
-
-    modifier nonReentrant() {
-        ReentrancyGuardStorage storage $ = _getReentrancyGuardStorage();
-        if ($._status == _ENTERED) {
-            revert ReentrancyGuardReentrantCall();
-        }
-        $._status = _ENTERED;
-        _;
-        $._status = _NOT_ENTERED;
-    }
-
-    function _getReentrancyGuardStorage() private pure returns (ReentrancyGuardStorage storage $) {
-        assembly {
-            $.slot := ReentrancyGuardStorageLocation
-        }
-    }
-}
-
-// Kontrak abstrak PausableUpgradeable
-abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
-    struct PausableStorage {
-        bool _paused;
-    }
-
-    bytes32 private constant PausableStorageLocation = 0xcd5a11904ed2d5a02c2a37e7f7b5d4b4f6d967f6f327b46778481a4d6f3b48a0;
-    event Paused(address account);
-    event Unpaused(address account);
-    error EnforcedPause();
-    error ExpectedPause();
-
-    function __Pausable_init() internal onlyInitializing {
-        __Pausable_init_unchained();
-    }
-
-    function __Pausable_init_unchained() internal onlyInitializing {
-        PausableStorage storage $ = _getPausableStorage();
-        $._paused = false;
-    }
-
-    modifier whenNotPaused() {
-        _requireNotPaused();
-        _;
-    }
-
-    modifier whenPaused() {
-        _requirePaused();
-        _;
-    }
-
-    function paused() public view virtual returns (bool) {
-        PausableStorage storage $ = _getPausableStorage();
-        return $._paused;
-    }
-
-    function _requireNotPaused() internal view virtual {
-        if (paused()) {
-            revert EnforcedPause();
-        }
-    }
-
-    function _requirePaused() internal view virtual {
-        if (!paused()) {
-            revert ExpectedPause();
-        }
-    }
-
-    function _pause() internal virtual whenNotPaused {
-        PausableStorage storage $ = _getPausableStorage();
-        $._paused = true;
-        emit Paused(_msgSender());
-    }
-
-    function _unpause() internal virtual whenPaused {
-        PausableStorage storage $ = _getPausableStorage();
-        $._paused = false;
-        emit Unpaused(_msgSender());
-    }
-
-    function _getPausableStorage() private pure returns (PausableStorage storage $) {
-        assembly {
-            $.slot := PausableStorageLocation
-        }
-    }
-}
-
-// Library SafeERC20 (untuk transfer aman)
-library SafeERC20 {
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
-    }
-
-    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
-    }
-
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
-        (bool success, bytes memory returndata) = address(token).call(data);
-        if (!success) {
-            if (returndata.length > 0) {
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert("SafeERC20: transfer failed");
-            }
-        }
-        if (returndata.length > 0) {
-            if (!abi.decode(returndata, (bool))) {
-                revert("SafeERC20: transfer failed");
-            }
-        }
-    }
-}
-
-// Kontrak utama Otakudump
-contract Otakudump is Initializable, ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, PausableUpgradeable {
-    using SafeERC20 for IERC20;
-
-    /// @notice Maximum supply of Otakudump tokens (121 trillion)
-    uint256 public constant MAX_SUPPLY = 121_000_000_000_000 * 10**18;
-    bool public isMinted = false;
-
-    /// @notice Burn rate (0.5% per transaction to DEX)
-    uint256 public constant BURN_RATE = 50;
-    /// @notice Maximum tokens that can be burned (30 trillion)
-    uint256 public constant MAX_BURN_AMOUNT = 30_000_000_000_000 * 10**18;
-    uint256 public totalBurned = 0;
-    bool public burnEnabled = true; // Toggle for burn feature
-    bool public burnPermanentlyDisabled = false; // Permanent burn disable flag
-
-    /// @notice Maximum transaction amount (5% of total supply)
-    uint256 public constant MAX_TX_AMOUNT = MAX_SUPPLY / 20;
-
-    /// @notice Reward rate for holders (0.2% of burn amount)
-    uint256 public constant REWARD_RATE = 20;
-    uint256 public totalReflections = 0;
-    mapping(address => uint256) public reflectionBalances;
-    mapping(address => uint256) public lastUpdated;
-
-    /// @notice Mapping for DEX pairs
-    mapping(address => bool) public dexPairs;
-
-    /// @notice Mapping for locked liquidity
-    mapping(address => uint256) public lockedLiquidity;
-    uint256 public totalLockedLiquidity;
-
-    /// @notice Placeholder for staking contract address
-    address public stakingContract;
-
-    /// @notice Event emitted when tokens are burned
-    event TokensBurned(address indexed burner, uint256 amount);
-    /// @notice Event emitted when rewards are distributed
-    event RewardsDistributed(uint256 amount);
-    /// @notice Event emitted when burn feature is toggled
-    event BurnToggled(bool enabled);
-    /// @notice Event emitted when burn is permanently disabled
-    event BurnPermanentlyDisabled();
-    /// @notice Event emitted when liquidity is burned
-    event LiquidityBurned(address indexed burner, uint256 amount);
-    /// @notice Event emitted when liquidity is locked
-    event LiquidityLocked(address indexed locker, uint256 amount);
-    /// @notice Event emitted when staking contract is set
-    event StakingContractSet(address indexed stakingContract);
-
-    /// @notice Constructor to initialize the contract
+contract Otakudump is Initializable, ERC20Upgradeable, OwnableUpgradeable {
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
-        _disableInitializers(); // Mencegah inisialisasi langsung tanpa proxy
+        _disableInitializers();
     }
 
-    /// @notice Fungsi inisialisasi untuk kontrak upgradeable
-    function initialize(address initialOwner, address _initialDexPair) initializer public {
-        __ERC20_init("Otakudump", "OTD"); // Nama: Otakudump, Simbol: OTD
-        __Ownable_init(initialOwner); // Menetapkan pemilik awal
-        __ReentrancyGuard_init(); // Inisialisasi ReentrancyGuard
-        __Pausable_init(); // Inisialisasi Pausable
+    function initialize(address initialOwner) initializer public {
+        __ERC20_init("Otakudump", "OTD");
+        __Ownable_init(initialOwner);
 
-        require(!isMinted, "Tokens already minted");
-        require(_initialDexPair != address(0), "Invalid initial DEX pair");
-        _mint(initialOwner, MAX_SUPPLY);
-        isMinted = true;
-        dexPairs[_initialDexPair] = true;
+        _mint(initialOwner, 121_000_000_000_000 * 10 ** decimals());
     }
 
-    /// @notice Updates reflection balance for an account
-    function _updateReflection(address account) internal {
-        if (lastUpdated[account] < block.timestamp && totalReflections > 0) {
-            uint256 currentBalance = super.balanceOf(account);
-            if (currentBalance > 0) {
-                uint256 share = (currentBalance * totalReflections) / (MAX_SUPPLY - totalBurned);
-                reflectionBalances[account] += share;
-            }
-            lastUpdated[account] = block.timestamp;
-        }
-    }
-
-    /// @notice Returns the balance of an account including reflections
-    function balanceOf(address account) public view virtual override returns (uint256) {
-        uint256 baseBalance = super.balanceOf(account);
-        uint256 reflection = reflectionBalances[account];
-        if (baseBalance > 0 && totalReflections > reflectionBalances[account]) {
-            uint256 share = (baseBalance * totalReflections) / (MAX_SUPPLY - totalBurned);
-            reflection = share > reflectionBalances[account] ? share : reflectionBalances[account];
-        }
-        return baseBalance + reflection;
-    }
-
-    /// @notice Transfers tokens with burn and reflection logic
-    function transfer(address to, uint256 amount) public virtual override nonReentrant whenNotPaused returns (bool) {
-        require(to != address(0), "Cannot transfer to zero address");
-        require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
-
-        _updateReflection(msg.sender);
-        _updateReflection(to);
-
-        if (dexPairs[to] && BURN_RATE > 0 && !isContract(msg.sender) && burnEnabled && !burnPermanentlyDisabled) {
-            uint256 burnAmount = (amount * BURN_RATE) / 10000;
-            uint256 rewardAmount = (burnAmount * REWARD_RATE) / 100;
-            uint256 netBurnAmount = burnAmount - rewardAmount;
-            uint256 transferAmount = amount - burnAmount;
-
-            if (netBurnAmount > 0 && totalBurned + netBurnAmount <= MAX_BURN_AMOUNT) {
-                _burn(msg.sender, netBurnAmount);
-                totalBurned += netBurnAmount;
-                emit TokensBurned(msg.sender, netBurnAmount);
-            } else if (netBurnAmount > 0) {
-                netBurnAmount = MAX_BURN_AMOUNT - totalBurned;
-                if (netBurnAmount > 0) {
-                    _burn(msg.sender, netBurnAmount);
-                    totalBurned += netBurnAmount;
-                    emit TokensBurned(msg.sender, netBurnAmount);
-                }
-            }
-            if (rewardAmount > 0) {
-                totalReflections += rewardAmount;
-                emit RewardsDistributed(rewardAmount);
-            }
-            return super.transfer(to, transferAmount);
-        }
-        return super.transfer(to, amount);
-    }
-
-    /// @notice Transfers tokens from one address to another
-    function transferFrom(address from, address to, uint256 amount) public virtual override nonReentrant whenNotPaused returns (bool) {
-        require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
-
-        _updateReflection(from);
-        _updateReflection(to);
-
-        if (dexPairs[to] && BURN_RATE > 0 && !isContract(from) && burnEnabled && !burnPermanentlyDisabled) {
-            uint256 burnAmount = (amount * BURN_RATE) / 10000;
-            uint256 rewardAmount = (burnAmount * REWARD_RATE) / 100;
-            uint256 netBurnAmount = burnAmount - rewardAmount;
-            uint256 transferAmount = amount - burnAmount;
-
-            if (netBurnAmount > 0 && totalBurned + netBurnAmount <= MAX_BURN_AMOUNT) {
-                _burn(from, netBurnAmount);
-                totalBurned += netBurnAmount;
-                emit TokensBurned(from, netBurnAmount);
-            } else if (netBurnAmount > 0) {
-                netBurnAmount = MAX_BURN_AMOUNT - totalBurned;
-                if (netBurnAmount > 0) {
-                    _burn(from, netBurnAmount);
-                    totalBurned += netBurnAmount;
-                    emit TokensBurned(from, netBurnAmount);
-                }
-            }
-            if (rewardAmount > 0) {
-                totalReflections += rewardAmount;
-                emit RewardsDistributed(rewardAmount);
-            }
-            return super.transferFrom(from, to, transferAmount);
-        }
-        return super.transferFrom(from, to, amount);
-    }
-
-    /// @notice Burns tokens manually (only owner)
-    function burn(uint256 amount) public onlyOwner whenNotPaused {
-        require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
-        require(totalBurned + amount <= MAX_BURN_AMOUNT, "Exceeds max burn limit");
-        require(burnEnabled && !burnPermanentlyDisabled, "Burn feature is disabled");
-        _updateReflection(msg.sender);
-        _burn(msg.sender, amount);
-        totalBurned += amount;
-        emit TokensBurned(msg.sender, amount);
-    }
-
-    /// @notice Burns liquidity tokens and locks them (only owner)
-    function burnAndLockLiquidity(uint256 amount) external onlyOwner whenNotPaused {
-        require(amount <= MAX_TX_AMOUNT, "Amount exceeds max tx limit");
-        require(totalBurned + amount <= MAX_BURN_AMOUNT, "Exceeds max burn limit");
-        require(burnEnabled && !burnPermanentlyDisabled, "Burn feature is disabled");
-        _updateReflection(msg.sender);
-        _burn(msg.sender, amount);
-        totalBurned += amount;
-        lockedLiquidity[msg.sender] += amount;
-        totalLockedLiquidity += amount;
-        emit LiquidityBurned(msg.sender, amount);
-        emit LiquidityLocked(msg.sender, amount);
-    }
-
-    /// @notice Toggles the burn feature (only owner)
-    function toggleBurn(bool enabled) external onlyOwner {
-        require(!burnPermanentlyDisabled, "Burn feature is permanently disabled");
-        burnEnabled = enabled;
-        emit BurnToggled(enabled);
-    }
-
-    /// @notice Permanently disables the burn feature (only owner)
-    function disableBurnPermanently() external onlyOwner {
-        require(burnEnabled, "Burn feature is already disabled");
-        burnEnabled = false;
-        burnPermanentlyDisabled = true;
-        emit BurnPermanentlyDisabled();
-    }
-
-    /// @notice Adds a new DEX pair (only owner)
-    function addDexPair(address dexPair) external onlyOwner {
-        require(dexPair != address(0), "Invalid DEX pair address");
-        dexPairs[dexPair] = true;
-    }
-
-    /// @notice Removes a DEX pair (only owner)
-    function removeDexPair(address dexPair) external onlyOwner {
-        require(dexPairs[dexPair], "DEX pair not found");
-        dexPairs[dexPair] = false;
-    }
-
-    /// @notice Sets the staking contract address (only owner)
-    function setStakingContract(address _stakingContract) external onlyOwner {
-        require(_stakingContract != address(0), "Invalid staking contract address");
-        stakingContract = _stakingContract;
-        emit StakingContractSet(_stakingContract);
-    }
-
-    /// @notice Pauses the contract (only owner)
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    /// @notice Unpauses the contract (only owner)
-    function unpause() external onlyOwner {
-        _unpause();
-    }
-
-    /// @notice Gets tokenomics statistics
-    function getTokenomics() external view returns (uint256, uint256, uint256, uint256) {
-        return (MAX_SUPPLY, totalBurned, totalReflections, totalLockedLiquidity);
-    }
-
-    /// @notice Checks if an address is a contract
-    function isContract(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
-    }
-
-    /// @notice Prevents direct BNB deposits
-    receive() external payable {
-        revert("Contract does not accept direct BNB");
-    }
+    // function mint(address to, uint256 amount) public onlyOwner {
+    //     _mint(to, amount);
+    // }
 }
